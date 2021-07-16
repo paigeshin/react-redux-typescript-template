@@ -1,46 +1,300 @@
-# Getting Started with Create React App
+# Create Project
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+`npx create-react-app ${my-project} --template typescript`
 
-## Available Scripts
+# Dependency
 
-In the project directory, you can run:
+```bash
+npm i axios redux react-redux @types/redux @types/react-redux redux-devtools-extension redux-thunk @types/redux-thunk
+```
 
-### `npm start`
+- axios
+- redux
+- react-redux
+- @types/redux
+- @types/react-redux
+- redux-devtools-extension
+- redux-thunk
+- @types/redux-thunk
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+# Store Setting
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+- ./Store.js
 
-### `npm test`
+```tsx
+import { createStore, applyMiddleware } from "redux";
+import RootReducer from "./reducers/RootReducer";
+import { composeWithDevTools } from "redux-devtools-extension";
+import thunk from "redux-thunk";
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+const Store = createStore(
+  RootReducer,
+  composeWithDevTools(applyMiddleware(thunk))
+);
 
-### `npm run build`
+export type RootStore = ReturnType<typeof RootReducer>;
+export default Store;
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+# Index.tsx
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+- ./index.tsx
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```tsx
+import React from "react";
+import ReactDOM from "react-dom";
+import App from "./App";
+import { Provider } from "react-redux";
+import store from "./Store";
 
-### `npm run eject`
+ReactDOM.render(
+  <React.StrictMode>
+    <Provider store={store}>
+      <App />
+    </Provider>
+  </React.StrictMode>,
+  document.getElementById("root")
+);
+```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+# Types
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- ./actions/PokemonActions.ts
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+```tsx
+import axios from "axios";
+import { Dispatch } from "redux";
+import {
+  PokemonDispatchTypes,
+  POKEMON_LOADING,
+  POKEMON_SUCCESS,
+  POKEMON_FAIL,
+} from "./PokemonActionTypes";
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+export const GetPokemon =
+  (pokemon: string) => async (dispatch: Dispatch<PokemonDispatchTypes>) => {
+    try {
+      dispatch({
+        type: POKEMON_LOADING,
+      });
+      console.log(`Search for ${pokemon}`);
+      const res = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${pokemon}`
+      );
+      console.log(`Search result for ${pokemon}: ${res.data}`);
+      dispatch({
+        type: POKEMON_SUCCESS,
+        payload: res.data,
+      });
+    } catch (error) {
+      console.log(`Search Error for ${pokemon} => ${error}`);
+      dispatch({ type: POKEMON_FAIL });
+    }
+  };
+```
 
-## Learn More
+- ./actions/PokemonActionTypes.ts
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```tsx
+export const POKEMON_LOADING = "POKEMON_LOADING";
+export const POKEMON_FAIL = "POKEMON_LOADING";
+export const POKEMON_SUCCESS = "POKEMON_LOADING";
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+//Type is for data
+//Interface is for action
+
+export type PokemonType = {
+  abilities: PokemonAbility[];
+  sprites: PokemonSprites;
+  stats: PokemonStat[];
+};
+
+/** JSON Mapping for payload **/
+export type PokemonAbility = {
+  ability: {
+    name: string;
+    url: string;
+  };
+};
+
+export type PokemonSprites = {
+  front_default: string;
+};
+
+export type PokemonStat = {
+  base_stat: number;
+  stat: {
+    name: string;
+  };
+};
+
+/** Bind type with interface **/
+export interface PokemonLoading {
+  type: typeof POKEMON_LOADING; //Literal Type
+}
+
+export interface PokemonSuccess {
+  type: typeof POKEMON_SUCCESS;
+  payload: PokemonType;
+}
+
+export interface PokemonFail {
+  type: typeof POKEMON_FAIL;
+}
+
+export type PokemonDispatchTypes =
+  | PokemonLoading
+  | PokemonFail
+  | PokemonSuccess;
+```
+
+- ./actions/PokemonActions.ts
+
+```tsx
+import axios from "axios";
+import { Dispatch } from "redux";
+import {
+  PokemonDispatchTypes,
+  POKEMON_LOADING,
+  POKEMON_SUCCESS,
+  POKEMON_FAIL,
+} from "./PokemonActionTypes";
+
+export const GetPokemon =
+  (pokemon: string) => async (dispatch: Dispatch<PokemonDispatchTypes>) => {
+    try {
+      dispatch({
+        type: POKEMON_LOADING,
+      });
+      console.log(`Search for ${pokemon}`);
+      const res = await axios.get(
+        `https://pokeapi.co/api/v2/pokemon/${pokemon}`
+      );
+      console.log(`Search result for ${pokemon}: ${res.data}`);
+      dispatch({
+        type: POKEMON_SUCCESS,
+        payload: res.data,
+      });
+    } catch (error) {
+      console.log(`Search Error for ${pokemon} => ${error}`);
+      dispatch({ type: POKEMON_FAIL });
+    }
+  };
+```
+
+# Reducers
+
+- ./reducers/RootReducer
+
+```tsx
+import { combineReducers } from "redux";
+import pokemonReducer from "./PokemonReducer";
+
+const RootReducer = combineReducers({
+  pokemon: pokemonReducer,
+});
+
+export default RootReducer;
+```
+
+- ./reducers/PokemonReducers.ts
+
+```tsx
+import {
+  PokemonDispatchTypes,
+  PokemonSuccess,
+  PokemonType,
+  POKEMON_FAIL,
+  POKEMON_LOADING,
+  POKEMON_SUCCESS,
+} from "../actions/PokemonActionTypes";
+
+interface DefaultStateI {
+  loading: boolean;
+  pokemon?: PokemonType;
+}
+
+const defaultState: DefaultStateI = {
+  loading: false,
+};
+
+const pokemonReducer = (
+  state: DefaultStateI = defaultState,
+  action: PokemonDispatchTypes
+): DefaultStateI => {
+  switch (action.type) {
+    case POKEMON_SUCCESS: {
+      return {
+        loading: false,
+        pokemon: (action as PokemonSuccess).payload,
+      };
+    }
+    case POKEMON_FAIL: {
+      return {
+        loading: false,
+      };
+    }
+    case POKEMON_LOADING: {
+      return {
+        loading: true,
+      };
+    }
+    default:
+      return state;
+  }
+};
+
+export default pokemonReducer;
+```
+
+# App.js
+
+- with `useDispatch` and `useSelctor`
+
+```tsx
+import React, { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootStore } from "./Store";
+import { GetPokemon } from "./actions/PokemonActions";
+
+function App() {
+  // Redux
+  const dispatch = useDispatch(); //Redux-action
+  const pokemonState = useSelector((state: RootStore) => state.pokemon); //Redux-state
+
+  // Component State
+  const [pokemonName, setPokemonName] = useState("");
+
+  // functions
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPokemonName(event.target.value);
+  };
+  const handleSubmit = () => {
+    console.log(`Search for ${pokemonName}`);
+    dispatch(GetPokemon(pokemonName));
+  };
+
+  console.log(`Pokemon state: ${pokemonState}`);
+
+  return (
+    <div className="App">
+      <input type="text" onChange={handleChange} />
+      <button onClick={handleSubmit}>Search</button>
+      {pokemonState.pokemon && (
+        <div>
+          <img
+            src={pokemonState.pokemon?.sprites.front_default}
+            alt="pokemon"
+          />
+          {pokemonState.pokemon.abilities.map((ability, index) => {
+            return <p key={index}>{ability.ability.name}</p>;
+          })}
+        </div>
+      )}
+      {/* <div>{pokemonState}</div> */}
+    </div>
+  );
+}
+
+export default App;
+```
